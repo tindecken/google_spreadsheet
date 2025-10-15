@@ -10,19 +10,23 @@ const SERVICE_ACCOUNT_FILE = path.join(__dirname, "feisty-reef-475204-c1-00d9115
 
 // ID of your target spreadsheet (the long ID from the URL)
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID || "";
+const transactionSheet = "T"
 const app = new Hono()
 
 const updateSchema = Type.Object({
   range: Type.String(),
-  day: Type.Number(),
   note: Type.String(),
   price: Type.Number(),
   isPaybyCash: Type.Boolean(),
 })
-app.post('/update', tbValidator('json', updateSchema), async (c) => {
+app.post('/addTransaction', tbValidator('json', updateSchema), async (c) => {
   try {
     const body = await c.req.json();
-    const { range, day, note, price, isPaybyCash } = body;
+    const { range, note, price, isPaybyCash } = body;
+    
+    // Get current day of the month
+    const day = new Date().getDate();
+    
     // Load credentials and authenticate
     const auth = new google.auth.GoogleAuth({
       keyFile: SERVICE_ACCOUNT_FILE,
@@ -31,17 +35,6 @@ app.post('/update', tbValidator('json', updateSchema), async (c) => {
 
     // Create Sheets API instance with authenticated client
     const sheets = google.sheets({ version: "v4", auth });
-
-    // Get spreadsheet metadata to retrieve sheet names
-    const spreadsheet = await sheets.spreadsheets.get({
-      spreadsheetId: SPREADSHEET_ID,
-    });
-
-    // Get the first sheet name
-    const firstSheet = spreadsheet.data.sheets?.[0];
-    const firstSheetName = firstSheet?.properties?.title;
-    console.log(`First sheet name: ${firstSheetName}`);
-
     // Data to update
     const values = [[day, note, price, isPaybyCash ? "x" : ""]];
 
@@ -51,7 +44,7 @@ app.post('/update', tbValidator('json', updateSchema), async (c) => {
     // Perform the update
     const result = await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: range,
+      range: `${transactionSheet}!${range}`,
       valueInputOption: "USER_ENTERED", // use RAW if you don't want Sheets to parse input
       requestBody: resource,
     });
