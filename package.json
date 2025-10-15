@@ -1,0 +1,14 @@
+{
+  "name": "google_spreadsheet",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts"
+  },
+  "dependencies": {
+    "@hono/typebox-validator": "^1.0.0",
+    "googleapis": "^162.0.0",
+    "hono": "^4.9.12"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
