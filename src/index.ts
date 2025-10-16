@@ -1,12 +1,10 @@
 import { Hono } from 'hono'
-import { google } from "googleapis";
-import * as path from "path";
-import type { GenericResponseInterface } from './GenericResponseInterface';
+import type { GenericResponseInterface } from './models/GenericResponseInterface';
 import { tbValidator } from '@hono/typebox-validator'
 import Type from 'typebox'
-
-// Path to your service account key file
-const SERVICE_ACCOUNT_FILE = path.join(__dirname, "feisty-reef-475204-c1-00d911536c19.json");
+import getAuthenticatedSheets from './utils/getAuthenticatedSheets';
+import { getFirstEmptyCellInColumn } from './utils/getFirstEmptyCellInColumn';
+import { getPreviousColumnByValue } from './utils/getPreviousColumnByValue';
 
 // ID of your target spreadsheet (the long ID from the URL)
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID || "";
@@ -27,14 +25,8 @@ app.post('/addTransaction', tbValidator('json', updateSchema), async (c) => {
     // Get current day of the month
     const day = new Date().getDate();
     
-    // Load credentials and authenticate
-    const auth = new google.auth.GoogleAuth({
-      keyFile: SERVICE_ACCOUNT_FILE,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-    });
-
-    // Create Sheets API instance with authenticated client
-    const sheets = google.sheets({ version: "v4", auth });
+    // Get authenticated sheets instance
+    const sheets = await getAuthenticatedSheets();
     // Data to update
     const values = [[day, note, price, isPaybyCash ? "x" : ""]];
 
@@ -66,5 +58,65 @@ app.post('/addTransaction', tbValidator('json', updateSchema), async (c) => {
   }
 })
 
+
+const getCellbyValueSchema = Type.Object({
+  sheetName: Type.String(),
+})
+app.get('/getPreviousColumnByValue', tbValidator('query', getCellbyValueSchema), async (c) => {
+  try {
+    const sheetName = c.req.query("sheetName");
+    
+    // Get current month and year
+    const now = new Date();
+    const currentMonth = now.getMonth(); // getMonth() returns 0-11
+    const currentYear = now.getFullYear();
+    const value = `${currentMonth}/${currentYear}`;
+    
+    // Call the utility function
+    const result = await getPreviousColumnByValue(sheetName!, value, SPREADSHEET_ID);
+    
+    const res: GenericResponseInterface = {
+      success: true,
+      message: `Found value "${value}" at cell ${result.cellAddress}, previous column is ${result.previousColumn}`,
+      data: result.previousColumn,
+    };
+    return c.json(res, 200);
+  } catch (error: any) {
+    const response: GenericResponseInterface = {
+      success: false,
+      message: error.message || "Error while searching for cell",
+      data: null,
+    };
+    return c.json(response, error.message?.includes("not found") || error.message?.includes("column A") ? 404 : 500);
+  }
+})
+
+const getFirstEmptyCellSchema = Type.Object({
+  sheetName: Type.String(),
+  column: Type.String(),
+})
+app.get('/getFirstEmptyCellInColumn', tbValidator('query', getFirstEmptyCellSchema), async (c) => {
+  try {
+    const sheetName = c.req.query("sheetName");
+    const column = c.req.query("column");
+    
+    // Call the utility function
+    const result = await getFirstEmptyCellInColumn(sheetName!, column!, SPREADSHEET_ID);
+    
+    const res: GenericResponseInterface = {
+      success: true,
+      message: `First empty cell in column ${result.column} is ${result.cellAddress}`,
+      data: result.cellAddress,
+    };
+    return c.json(res, 200);
+  } catch (error: any) {
+    const response: GenericResponseInterface = {
+      success: false,
+      message: error.message || "Error while finding empty cell",
+      data: null,
+    };
+    return c.json(response, error.message?.includes("Invalid") || error.message?.includes("Missing") ? 400 : 500);
+  }
+})
 export default app
  
