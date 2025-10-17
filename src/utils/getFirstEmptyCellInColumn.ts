@@ -1,4 +1,3 @@
-import { sheets_v4 } from 'googleapis';
 import getAuthenticatedSheets from './getAuthenticatedSheets';
 
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
