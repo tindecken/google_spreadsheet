@@ -1,12 +1,10 @@
 import { sheets_v4 } from 'googleapis';
 import getAuthenticatedSheets from './getAuthenticatedSheets';
 
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID || "";
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
-interface GetFirstEmptyCellResult {
-  cellAddress: string;
-  row: number;
-  column: string;
+if (!SPREADSHEET_ID) {
+    throw new Error('SPREADSHEET_ID environment variable is not defined');
 }
 
 /**
@@ -32,8 +30,8 @@ const letterToColumn = (letters: string): number => {
 export async function getFirstEmptyCellInColumn(
   sheetName: string = "T",
   column: string,
-  spreadsheetId: string = SPREADSHEET_ID
-): Promise<GetFirstEmptyCellResult> {
+  spreadsheetId: string = SPREADSHEET_ID!
+): Promise<string> {
   // Validate required parameters
   if (!sheetName || !column) {
     throw new Error("Missing required parameters: sheetName and column");
@@ -89,11 +87,8 @@ export async function getFirstEmptyCellInColumn(
   if (!rows || rows.length === 0) {
     // Sheet is empty, so first empty cell is at row 1
     const cellAddress = `${column.toUpperCase()}1`;
-    return {
-      cellAddress,
-      row: 1,
-      column: column.toUpperCase()
-    };
+    console.log(`Sheet "${sheetName}" is empty. First empty cell is ${cellAddress}`);
+    return cellAddress
   }
 
   // Find the first empty cell in the specified column
@@ -120,12 +115,8 @@ export async function getFirstEmptyCellInColumn(
   }
   
   const cellAddress = `${column.toUpperCase()}${firstEmptyRow}`;
-  
-  return {
-    cellAddress,
-    row: firstEmptyRow,
-    column: column.toUpperCase()
-  };
+  console.log(`First empty cell in column ${column} of sheet "${sheetName}" is ${cellAddress}`);
+  return cellAddress
 }
 
 export default getFirstEmptyCellInColumn;

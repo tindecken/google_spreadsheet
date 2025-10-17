@@ -1,25 +1,23 @@
-import { google, sheets_v4 } from 'googleapis';
+import { google, sheets_v4, Auth } from 'googleapis';
+import * as path from "path";
 
 // src/utils/getAuthenticatedSheets.ts
+// Path to your service account key file
+const GOOGLE_APPLICATION_CREDENTIALS = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+if (!GOOGLE_APPLICATION_CREDENTIALS) {
+    throw new Error('GOOGLE_APPLICATION_CREDENTIALS environment variable is not defined');
+}
+
+const SERVICE_ACCOUNT_FILE = path.join(__dirname, "..", "..", GOOGLE_APPLICATION_CREDENTIALS);
 
 export default async function getAuthenticatedSheets(): Promise<sheets_v4.Sheets> {
-    const scopes = ['https://www.googleapis.com/auth/spreadsheets'];
-    const credentialsEnv = process.env.GOOGLE_SERVICE_ACCOUNT_KEY; // optional: JSON string of service account
-    const keyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS; // optional: path to service account key file
+    const auth: Auth.GoogleAuth = new google.auth.GoogleAuth({
+      keyFile: SERVICE_ACCOUNT_FILE,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
 
-    const authOptions: Record<string, unknown> = { scopes };
-
-    if (keyFile) {
-        authOptions.keyFile = keyFile;
-    } else if (credentialsEnv) {
-        try {
-            authOptions.credentials = JSON.parse(credentialsEnv);
-        } catch (err) {
-            throw new Error('Invalid JSON in GOOGLE_SERVICE_ACCOUNT_KEY environment variable');
-        }
-    }
-    // GoogleAuth will fall back to Application Default Credentials if neither is provided.
-    const auth = new google.auth.GoogleAuth(authOptions);
-
-    return google.sheets({ version: 'v4', auth });
+    // Create Sheets API instance with authenticated client
+    const sheets = google.sheets({ version: "v4", auth });
+    return sheets;
 }
