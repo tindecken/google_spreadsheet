@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+
 import type { GenericResponseInterface } from './models/GenericResponseInterface';
 import { tbValidator } from '@hono/typebox-validator'
 import Type from 'typebox'
@@ -16,6 +18,14 @@ if (!SPREADSHEET_ID) {
 }
 const transactionSheet = "T"
 const app = new Hono()
+app.use('/*', cors({
+	origin: ['*'],
+	allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+	allowHeaders: ['Content-Type', 'Authorization', 'Accept'],
+	credentials: true,
+	exposeHeaders: ['Content-Length', 'X-Kuma-Revision', 'X-Retry-After'],
+	maxAge: 10 * 60
+}))
 
 const updateSchema = Type.Object({
   note: Type.String(),
