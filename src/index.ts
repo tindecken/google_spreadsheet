@@ -6,6 +6,7 @@ import getAuthenticatedSheets from './utils/getAuthenticatedSheets';
 import { getFirstEmptyCellInColumn } from './utils/getFirstEmptyCellInColumn';
 import { getTransactionColumn } from './utils/getTransactionColumn';
 import getPerDay from './utils/getPerDay';
+import { readFileSync } from 'fs';
 
 // ID of your target spreadsheet (the long ID from the URL)
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -259,5 +260,22 @@ const letterToColumn = (letters: string): number => {
   return column - 1; // Convert to 0-based index
 };
 
-export default app
+// Load SSL/TLS certificates
+// For development, you can generate self-signed certs using openssl
+const isProd = process.env.NODE_ENV === 'production'
+console.log('isProd', isProd)
+const _options = !isProd
+  ? {
+      key: readFileSync('./localhost-key.pem'),
+      cert: readFileSync('./localhost-cert.pem'),
+    }
+  : undefined
+
+export default { 
+//   hostname: '0.0.0.0',
+  port: process.env.PORT || 4000, 
+  fetch: app.fetch, 
+  idleTimeout: 60,
+  ...(_options ? { tls: _options } : {})
+}
  
