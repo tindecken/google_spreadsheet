@@ -17,7 +17,7 @@ if (!SPREADSHEET_ID) {
     throw new Error('SPREADSHEET_ID environment variable is not defined');
 }
 const transactionSheet = "T"
-const app = new Hono()
+const app = new Hono().basePath('/api')
 app.use('/*', cors({
 	origin: ['*'],
 	allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
