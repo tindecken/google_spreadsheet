@@ -28,19 +28,22 @@ app.use('/*', cors({
 }))
 
 const updateSchema = Type.Object({
-  note: Type.String(),
+  day: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  note: Type.String({maxLength: 255}),
   price: Type.Number(),
   isPaybyCash: Type.Boolean(),
 })
 app.post('/addTransaction', tbValidator('json', updateSchema), async (c) => {
   try {
     const body = await c.req.json();
-    const { note, price, isPaybyCash } = body;
+    let { day, note, price, isPaybyCash } = body;
+    console.log('Day:', day);
     
     const transactionColumn = await getTransactionColumn(transactionSheet, "Date", SPREADSHEET_ID);
     const transacitonCell = await getFirstEmptyCellInColumn(transactionSheet, transactionColumn, SPREADSHEET_ID);
-    // Get current day of the month
-    const day = new Date().getDate();
+    if (day == null || day == undefined || day === "") {
+      day = new Date().getDate();
+    }
     
     // Get authenticated sheets instance
     const sheets = await getAuthenticatedSheets();
