@@ -14,22 +14,22 @@ import { readFileSync } from 'fs';
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
 if (!SPREADSHEET_ID) {
-    throw new Error('SPREADSHEET_ID environment variable is not defined');
+  throw new Error('SPREADSHEET_ID environment variable is not defined');
 }
 const transactionSheet = "T"
 const app = new Hono().basePath('/api')
 app.use('/*', cors({
-	origin: ['*'],
-	allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-	allowHeaders: ['Content-Type', 'Authorization', 'Accept'],
-	credentials: true,
-	exposeHeaders: ['Content-Length', 'X-Kuma-Revision', 'X-Retry-After'],
-	maxAge: 10 * 60
+  origin: ['*'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true,
+  exposeHeaders: ['Content-Length', 'X-Kuma-Revision', 'X-Retry-After'],
+  maxAge: 10 * 60
 }))
 
 const updateSchema = Type.Object({
   day: Type.Optional(Type.Union([Type.String(), Type.Null()])),
-  note: Type.String({maxLength: 255}),
+  note: Type.String({ maxLength: 255 }),
   price: Type.Number(),
   isPaybyCash: Type.Boolean(),
 })
@@ -37,13 +37,13 @@ app.post('/addTransaction', tbValidator('json', updateSchema), async (c) => {
   try {
     const body = await c.req.json();
     let { day, note, price, isPaybyCash } = body;
-    
+
     const transactionColumn = await getTransactionColumn(transactionSheet, "Date", SPREADSHEET_ID);
     const transacitonCell = await getFirstEmptyCellInColumn(transactionSheet, transactionColumn, SPREADSHEET_ID);
     if (day == null || day == undefined || day === "") {
       day = new Date().getDate();
     }
-    
+
     // Get authenticated sheets instance
     const sheets = await getAuthenticatedSheets();
     // Data to update
@@ -95,10 +95,10 @@ app.post('/undoTransaction', async (c) => {
   try {
     // Get authenticated sheets instance
     const sheets = await getAuthenticatedSheets();
-    
+
     // Get the transaction column
     const transactionColumn = await getTransactionColumn(transactionSheet, "Date", SPREADSHEET_ID);
-    
+
     // Get all values from the transaction sheet
     const result = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
@@ -106,7 +106,7 @@ app.post('/undoTransaction', async (c) => {
     });
 
     const rows = result.data.values;
-    
+
     if (!rows || rows.length === 0) {
       const response: GenericResponseInterface = {
         success: false,
@@ -119,7 +119,7 @@ app.post('/undoTransaction', async (c) => {
     // Find the last row with data in the transaction column
     const colIndex = letterToColumn(transactionColumn);
     let lastTransactionRow = -1;
-    
+
     // Start from the bottom and find the last non-empty cell in the transaction column
     for (let rowIndex = rows.length - 1; rowIndex >= 0; rowIndex--) {
       const row = rows[rowIndex];
@@ -140,11 +140,11 @@ app.post('/undoTransaction', async (c) => {
 
     // Get per day value before update
     const perDayBefore = await getPerDay();
-    
+
     // Clear the entire row of the last transaction
     const rowNumber = lastTransactionRow + 1; // Convert to 1-based row number
     const range = `${transactionSheet}!A${rowNumber}:Z${rowNumber}`;
-    
+
     // Clear the row values
     await sheets.spreadsheets.values.clear({
       spreadsheetId: SPREADSHEET_ID,
@@ -153,14 +153,14 @@ app.post('/undoTransaction', async (c) => {
 
     // Get updated per day value
     const perDayAfter = await getPerDay();
-    
+
     const responseData = {
       sheet: transactionSheet,
       row: rowNumber,
       perDayBefore,
       perDayAfter
     };
-    
+
     const res: GenericResponseInterface = {
       success: true,
       message: 'Transaction undone successfully',
@@ -183,10 +183,10 @@ app.get('/lastTransaction', async (c) => {
   try {
     // Get authenticated sheets instance
     const sheets = await getAuthenticatedSheets();
-    
+
     // Get the transaction column
     const transactionColumn = await getTransactionColumn(transactionSheet, "Date", SPREADSHEET_ID);
-    
+
     // Get all values from the transaction sheet
     const result = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
@@ -194,7 +194,7 @@ app.get('/lastTransaction', async (c) => {
     });
 
     const rows = result.data.values;
-    
+
     if (!rows || rows.length === 0) {
       const response: GenericResponseInterface = {
         success: false,
@@ -207,7 +207,7 @@ app.get('/lastTransaction', async (c) => {
     // Find the last row with data in the transaction column
     const colIndex = letterToColumn(transactionColumn);
     let lastTransactionRow = -1;
-    
+
     // Start from the bottom and find the last non-empty cell in the transaction column
     for (let rowIndex = rows.length - 1; rowIndex >= 0; rowIndex--) {
       const row = rows[rowIndex];
@@ -262,6 +262,86 @@ app.get('/lastTransaction', async (c) => {
   }
 })
 
+app.get('/last5Transactions', async (c) => {
+  try {
+    // Get authenticated sheets instance
+    const sheets = await getAuthenticatedSheets();
+
+    // Get the transaction column
+    const transactionColumn = await getTransactionColumn(transactionSheet, "Date", SPREADSHEET_ID);
+
+    // Get all values from the transaction sheet
+    const result = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${transactionSheet}`,
+    });
+
+    const rows = result.data.values;
+
+    if (!rows || rows.length === 0) {
+      const response: GenericResponseInterface = {
+        success: false,
+        message: 'No transactions found',
+        data: null,
+      };
+      return c.json(response, 404);
+    }
+
+    // Find all rows with data in the transaction column
+    const colIndex = letterToColumn(transactionColumn);
+    const transactionRows: number[] = [];
+
+    // Find all non-empty cells in the transaction column
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+      const row = rows[rowIndex];
+      if (row && colIndex < row.length && row[colIndex] !== null && row[colIndex] !== undefined && row[colIndex] !== '') {
+        transactionRows.push(rowIndex);
+      }
+    }
+
+    if (transactionRows.length === 0) {
+      const response: GenericResponseInterface = {
+        success: false,
+        message: 'No transactions found',
+        data: null,
+      };
+      return c.json(response, 404);
+    }
+
+    // Get per day value
+    const perDay = await getPerDay();
+
+    // Get the last 5 transactions (or fewer if less than 5 exist)
+    const last5Rows = transactionRows.slice(-5).reverse();
+    const transactions = last5Rows.map(rowIndex => {
+      const row = rows[rowIndex];
+      return {
+        date: row[colIndex] || '',
+        note: row[colIndex + 1] || '',
+        price: row[colIndex + 2] || 0,
+        isCashed: row[colIndex + 3] === 'x',
+        perDay
+      };
+    });
+
+    const res: GenericResponseInterface = {
+      success: true,
+      message: 'Last 5 transactions retrieved successfully',
+      data: transactions,
+    };
+    return c.json(res, 200);
+  } catch (error: any) {
+    const response: GenericResponseInterface = {
+      success: false,
+      message: error
+        ? `Error while retrieving last 5 transactions: ${error}${error.code ? ` - ${error.code}` : ""}`
+        : "Error while retrieving last 5 transactions",
+      data: null,
+    };
+    return c.json(response, 500);
+  }
+})
+
 // Helper function to convert column letter to index (A -> 0, B -> 1, etc.)
 const letterToColumn = (letters: string): number => {
   let column = 0;
@@ -278,16 +358,15 @@ const isProd = process.env.NODE_ENV === 'production'
 console.log('isProd', isProd)
 const _options = !isProd
   ? {
-      key: readFileSync('./localhost-key.pem'),
-      cert: readFileSync('./localhost-cert.pem'),
-    }
+    key: readFileSync('./localhost-key.pem'),
+    cert: readFileSync('./localhost-cert.pem'),
+  }
   : undefined
 
-export default { 
-//   hostname: '0.0.0.0',
-  port: process.env.PORT || 4000, 
-  fetch: app.fetch, 
+export default {
+  //   hostname: '0.0.0.0',
+  port: process.env.PORT || 4000,
+  fetch: app.fetch,
   idleTimeout: 60,
   ...(_options ? { tls: _options } : {})
 }
- 
