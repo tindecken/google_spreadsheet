@@ -342,6 +342,30 @@ app.get('/last5Transactions', async (c) => {
   }
 })
 
+app.get('/perDay', async (c) => {
+  try {
+    const perDay = await getPerDay();
+
+    const res: GenericResponseInterface = {
+      success: true,
+      message: 'Retrieved per day successfully',
+      data: {
+        perDay
+      },
+    };
+    return c.json(res, 200);
+  } catch (error: any) {
+    const response: GenericResponseInterface = {
+      success: false,
+      message: error
+        ? `Error while retrieving per day: ${error}${error.code ? ` - ${error.code}` : ""}`
+        : "Error while retrieving per day",
+      data: null,
+    };
+    return c.json(response, 500);
+  }
+})
+
 // Helper function to convert column letter to index (A -> 0, B -> 1, etc.)
 const letterToColumn = (letters: string): number => {
   let column = 0;
