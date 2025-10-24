@@ -19,7 +19,7 @@ if (!SPREADSHEET_ID) {
 const transactionSheet = "T"
 const app = new Hono().basePath('/api')
 app.use('/*', cors({
-  origin: ['https://localhost:57042'],
+  origin: ['https://localhost:57042', 'https://d3.tindecken.xyz'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
