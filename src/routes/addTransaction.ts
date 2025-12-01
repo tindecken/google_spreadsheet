@@ -6,6 +6,7 @@ import getPerDay from '../utils/getPerDay';
 import { tbValidator } from '@hono/typebox-validator'
 import Type from 'typebox'
 import type { GenericResponseInterface } from '../models/GenericResponseInterface';
+import getFirstSheet from "../utils/getFirstSheet";
 
 export const addTransaction = new Hono();
 
@@ -43,7 +44,7 @@ addTransaction.post('/addTransaction', tbValidator('json', updateSchema), async 
     // get per day value before update
     const perDayBefore = await getPerDay()
     // Perform the update in Transaction Sheet
-    const result = await sheets.spreadsheets.values.update({
+    await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
       range: `${transactionSheet}!${transacitonCell}`,
       valueInputOption: "USER_ENTERED", // use RAW if you don't want Sheets to parse input
@@ -51,7 +52,36 @@ addTransaction.post('/addTransaction', tbValidator('json', updateSchema), async 
     });
     if (isCountForNhi) {
         // TODO: Perform the update in First Sheet, Nhi
+        // Get the first sheet name
+        const fistSheeName = await getFirstSheet(SPREADSHEET_ID);
+        const NhiTransactionCell = await getFirstEmptyCellInColumn(fistSheeName, 'C7', SPREADSHEET_ID);
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${fistSheeName}!${NhiTransactionCell}`,
+          valueInputOption: "USER_ENTERED", // use RAW if you don't want Sheets to parse input
+          requestBody: { values: [[note, price, isPaybyCash ? "x" : ""]] },
+        });
         // TODO: Perform the update in First Sheet, ta or tv column
+        let cell: string = ''
+        if (isPaybyCash) {
+          cell='D2'
+        } else {
+          cell='D1'
+        }
+        const currentCellRes = await sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${fistSheeName}!${cell}`,
+        });
+        const currentRaw = (currentCellRes.data.values && currentCellRes.data.values[0]
+          && currentCellRes.data.values[0][0]) ?? 0;
+        const current = Number(currentRaw) || 0;
+        const newValue = current + price;
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${fistSheeName}!${cell}`,
+          valueInputOption: "USER_ENTERED", // use RAW if you don't want Sheets to parse input
+          requestBody: { values: [[newValue]] },
+        });
     }
     
     // get updated per day value

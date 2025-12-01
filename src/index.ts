@@ -7,6 +7,7 @@ import { undoTransaction } from './routes/undoTransaction';
 import { lastTransaction } from './routes/lastTransaction';
 import { last5Transactions } from './routes/last5Transactions';
 import { perDay } from './routes/perDay';
+import { nhiRemaining } from './routes/nhiRemaining';
 
 // ID of your target spreadsheet (the long ID from the URL)
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
@@ -30,6 +31,7 @@ app.route("/", undoTransaction)
 app.route("/", lastTransaction)
 app.route("/", last5Transactions)
 app.route("/", perDay)
+app.route("/", nhiRemaining)
 
 // Load SSL/TLS certificates
 // For development, you can generate self-signed certs using openssl
