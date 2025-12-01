@@ -21,26 +21,29 @@ const letterToColumn = (letters: string): number => {
 /**
  * Find the first empty cell in a specified column of a Google Sheet
  * @param sheetName - The name of the sheet/tab
- * @param column - The column letter (e.g., 'A', 'B', 'AB')
+ * @param cell - The starting cell address (e.g., 'D7')
  * @param spreadsheetId - Optional spreadsheet ID (defaults to env variable)
  * @returns Object containing cell address, row number, and column letter
  * @throws Error if parameters are invalid or operation fails
  */
 export async function getFirstEmptyCellInColumn(
   sheetName: string = "T",
-  column: string,
+  cell: string,
   spreadsheetId: string = SPREADSHEET_ID!
 ): Promise<string> {
   // Validate required parameters
-  if (!sheetName || !column) {
-    throw new Error("Missing required parameters: sheetName and column");
+  if (!sheetName || !cell) {
+    throw new Error("Missing required parameters: sheetName and cell");
   }
   
-  // Validate column format (should be A-Z letters only)
-  const columnPattern = /^[A-Z]+$/i;
-  if (!columnPattern.test(column)) {
-    throw new Error("Invalid column format. Please use column letters (A, B, C, etc.)");
+  // Validate and parse cell address (e.g., D7)
+  const cellMatch = /^([A-Z]+)(\d+)$/i.exec(cell.trim());
+  if (!cellMatch) {
+    throw new Error("Invalid cell format. Please use a cell address like D7");
   }
+  const column = cellMatch[1].toUpperCase();
+  const startRowNumber = parseInt(cellMatch[2], 10);
+  const searchStartRowNumber = startRowNumber + 1; // first row below the given cell
   
   const colIndex = letterToColumn(column);
   
@@ -84,16 +87,19 @@ export async function getFirstEmptyCellInColumn(
   const rows = result.data.values;
   
   if (!rows || rows.length === 0) {
-    // Sheet is empty, so first empty cell is at row 1
-    const cellAddress = `${column.toUpperCase()}1`;
+    // Sheet is empty, so first empty cell is the row below the provided cell
+    const cellAddress = `${column}${searchStartRowNumber}`;
     console.log(`Sheet "${sheetName}" is empty. First empty cell is ${cellAddress}`);
     return cellAddress
   }
 
   // Find the first empty cell in the specified column
-  let firstEmptyRow = 1; // Start at row 1 (1-based)
+  let firstEmptyRow = Math.max(searchStartRowNumber, 1); // 1-based
   
-  for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+  // Convert starting search row (1-based) to rows[] index (0-based)
+  const startIndex = Math.max(searchStartRowNumber - 1, 0);
+
+  for (let rowIndex = startIndex; rowIndex < rows.length; rowIndex++) {
     const row = rows[rowIndex];
     
     // Skip if this cell is part of a merged range
@@ -117,5 +123,3 @@ export async function getFirstEmptyCellInColumn(
   console.log(`First empty cell in column ${column} of sheet "${sheetName}" is ${cellAddress}`);
   return cellAddress
 }
-
-export default getFirstEmptyCellInColumn;

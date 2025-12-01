@@ -27,7 +27,7 @@ addTransaction.post('/addTransaction', tbValidator('json', updateSchema), async 
     let { day, note, price, isPaybyCash, isCountForNhi } = body;
 
     const transactionColumn = await getTransactionColumn(transactionSheet, "Date", SPREADSHEET_ID);
-    const transacitonCell = await getFirstEmptyCellInColumn(transactionSheet, transactionColumn, SPREADSHEET_ID);
+    const transacitonCell = await getFirstEmptyCellInColumn(transactionSheet, `${transactionColumn}2`, SPREADSHEET_ID);
     if (day == null || day == undefined || day === "") {
       day = new Date().getDate();
     }

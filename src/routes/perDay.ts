@@ -1,17 +1,10 @@
 import { Hono } from "hono";
-import { getTransactionColumn } from '../utils/getTransactionColumn';
-import { getFirstEmptyCellInColumn } from '../utils/getFirstEmptyCellInColumn'
-import getAuthenticatedSheets from '../utils/getAuthenticatedSheets';
 import getPerDay from '../utils/getPerDay';
-import { tbValidator } from '@hono/typebox-validator'
-import Type from 'typebox'
 import type { GenericResponseInterface } from '../models/GenericResponseInterface';
 
 export const perDay = new Hono();
 
-// ID of your target spreadsheet (the long ID from the URL)
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const transactionSheet = "T"
+
 
 perDay.get('/perDay', async (c) => {
   try {

@@ -1,10 +1,7 @@
 import { Hono } from "hono";
 import { getTransactionColumn } from '../utils/getTransactionColumn';
-import { getFirstEmptyCellInColumn } from '../utils/getFirstEmptyCellInColumn'
 import getAuthenticatedSheets from '../utils/getAuthenticatedSheets';
 import getPerDay from '../utils/getPerDay';
-import { tbValidator } from '@hono/typebox-validator'
-import Type from 'typebox'
 import type { GenericResponseInterface } from '../models/GenericResponseInterface';
 
 export const last5Transactions = new Hono();
