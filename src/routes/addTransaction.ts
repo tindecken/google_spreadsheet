@@ -17,12 +17,14 @@ const updateSchema = Type.Object({
   day: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   note: Type.String({ maxLength: 255 }),
   price: Type.Number(),
+  isCountForNhi: Type.Boolean(),
   isPaybyCash: Type.Boolean(),
+
 })
 addTransaction.post('/addTransaction', tbValidator('json', updateSchema), async (c) => {
   try {
     const body = await c.req.json();
-    let { day, note, price, isPaybyCash } = body;
+    let { day, note, price, isPaybyCash, isCountForNhi } = body;
 
     const transactionColumn = await getTransactionColumn(transactionSheet, "Date", SPREADSHEET_ID);
     const transacitonCell = await getFirstEmptyCellInColumn(transactionSheet, transactionColumn, SPREADSHEET_ID);
@@ -40,13 +42,18 @@ addTransaction.post('/addTransaction', tbValidator('json', updateSchema), async 
 
     // get per day value before update
     const perDayBefore = await getPerDay()
-    // Perform the update
+    // Perform the update in Transaction Sheet
     const result = await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
       range: `${transactionSheet}!${transacitonCell}`,
       valueInputOption: "USER_ENTERED", // use RAW if you don't want Sheets to parse input
       requestBody: resource,
     });
+    if (isCountForNhi) {
+        // TODO: Perform the update in First Sheet, Nhi
+        // TODO: Perform the update in First Sheet, ta or tv column
+    }
+    
     // get updated per day value
     const perDayAfter = await getPerDay()
     const responseData = {
@@ -55,6 +62,7 @@ addTransaction.post('/addTransaction', tbValidator('json', updateSchema), async 
       day,
       note,
       price,
+      isCountForNhi,
       isPaybyCash,
       perDayBefore,
       perDayAfter
