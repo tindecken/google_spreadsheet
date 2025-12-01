@@ -1,0 +1,48 @@
+import { Hono } from "hono";
+import { getTransactionColumn } from '../utils/getTransactionColumn';
+import { getFirstEmptyCellInColumn } from '../utils/getFirstEmptyCellInColumn'
+import getAuthenticatedSheets from '../utils/getAuthenticatedSheets';
+import getPerDay from '../utils/getPerDay';
+import { tbValidator } from '@hono/typebox-validator'
+import Type from 'typebox'
+import type { GenericResponseInterface } from '../models/GenericResponseInterface';
+
+export const perDay = new Hono();
+
+// ID of your target spreadsheet (the long ID from the URL)
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
+const transactionSheet = "T"
+
+perDay.get('/perDay', async (c) => {
+  try {
+    const perDay = await getPerDay();
+
+    const res: GenericResponseInterface = {
+      success: true,
+      message: 'Retrieved per day successfully',
+      data: {
+        perDay
+      },
+    };
+    return c.json(res, 200);
+  } catch (error: any) {
+    const response: GenericResponseInterface = {
+      success: false,
+      message: error
+        ? `Error while retrieving per day: ${error}${error.code ? ` - ${error.code}` : ""}`
+        : "Error while retrieving per day",
+      data: null,
+    };
+    return c.json(response, 500);
+  }
+})
+
+// Helper function to convert column letter to index (A -> 0, B -> 1, etc.)
+const letterToColumn = (letters: string): number => {
+  let column = 0;
+  const upperLetters = letters.toUpperCase();
+  for (let i = 0; i < upperLetters.length; i++) {
+    column = column * 26 + (upperLetters.charCodeAt(i) - 64);
+  }
+  return column - 1; // Convert to 0-based index
+};
